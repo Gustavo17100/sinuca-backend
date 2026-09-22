@@ -1,0 +1,15 @@
+{
+  "name": "sinuca-strike-backend",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Backend de pagamentos, contas e analytics do Sinuca Strike",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_security.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "pg": "^8.11.0"
+  }
+}
