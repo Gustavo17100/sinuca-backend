@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caixa — Sinuca Strike</title>
+<style>
+  :root{
+    --felt:#0b1a12; --panel:#10241a; --line:#1c3a29; --line2:#2b5a3d;
+    --gold:#ffd24a; --win:#7ee09a; --wait:#9db8a6; --warn:#ffb03a; --ink:#eef5ef;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(120% 120% at 50% 0%, #143523 0%, var(--felt) 70%);
+    color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;min-height:100vh}
+  main{max-width:960px;margin:0 auto;padding:26px 16px 60px}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .ball8{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%, #3a3f46, #101317 60%);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.5)}
+  .ball8 span{width:16px;height:16px;border-radius:50%;background:#f5f7fa;color:#101317;
+    font-weight:900;font-size:11px;display:flex;align-items:center;justify-content:center}
+  h1{font-size:19px;letter-spacing:.5px}
+  h1 small{display:block;font-size:11px;font-weight:600;color:var(--wait);letter-spacing:2px}
+  .live{margin-left:auto;font-size:11px;color:var(--win);border:1px solid var(--line2);
+    border-radius:999px;padding:5px 11px;background:rgba(126,224,154,.07)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .card b{display:block;font-size:24px;color:var(--gold);font-variant-numeric:tabular-nums;
+    font-family:ui-monospace,"Courier New",monospace}
+  .card.pago b{color:var(--win)}
+  .card span{font-size:11.5px;color:var(--wait)}
+  .charts{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-top:10px}
+  @media (max-width:700px){.charts{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .panel h2{font-size:12px;font-weight:800;letter-spacing:1.4px;color:var(--wait);text-transform:uppercase}
+  canvas{width:100%;display:block;margin-top:10px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--wait)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center}
+  select,.filters input{background:#0d1f16;border:1px solid var(--line2);color:var(--ink);
+    border-radius:10px;padding:8px 11px;font-size:13px;outline:none}
+  .filters input{flex:1;min-width:150px}
+  .filters input:focus,.filters select:focus{border-color:var(--gold)}
+  .btn{background:linear-gradient(180deg,#2f7d4f,#1d5c38);border:1px solid #3fa06b;color:#fff;
+    font-weight:700;font-size:13px;padding:8px 14px;border-radius:10px;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);
+    border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  th{background:#1d5c38;text-align:left;padding:10px;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+  td{padding:9px 10px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  td.money{font-family:ui-monospace,"Courier New",monospace;color:var(--gold);font-weight:700}
+  .st{font-weight:800}
+  .st.paid{color:var(--win)} .st.pending{color:var(--wait)} .st.underpaid{color:var(--warn)}
+  .empty{padding:18px;text-align:center;color:var(--wait);font-size:13px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:999px;
+    padding:5px 12px;font-size:12px}
+  .chip b{color:var(--gold)}
+  .err{font-size:12px;color:#ffb59f;background:rgba(255,120,90,.08);border-radius:8px;
+    padding:7px 10px;margin:4px 0}
+  .ok{color:var(--win);font-size:13px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  @media (max-width:700px){.cols{grid-template-columns:1fr}}
+  .num{font-family:ui-monospace,"Courier New",monospace}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="ball8"><span>8</span></div>
+    <h1>SINUCA STRIKE · CAIXA<small>PAINEL DE CONCILIAÇÃO</small></h1>
+    <span class="live">● ao vivo — atualiza a cada 15 s</span>
+  </header>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="charts">
+    <div class="panel">
+      <h2>Receita paga · últimos 14 dias</h2>
+      <canvas id="cvBars" height="150"></canvas>
+      <div class="legend">
+        <span><span class="dot" style="background:#2f7d4f"></span>dias anteriores</span>
+        <span><span class="dot" style="background:var(--gold)"></span>hoje (a bola 8)</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Formas de pagamento</h2>
+      <canvas id="cvDonut" height="150"></canvas>
+      <div class="legend" id="donutLegend"></div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <select id="fTipo">
+      <option value="">Todas as formas</option>
+      <option value="pix">PIX</option>
+      <option value="card">Cartão</option>
+      <option value="boleto">Boleto</option>
+    </select>
+    <select id="fSt">
+      <option value="">Todos os status</option>
+      <option value="paid">Pagas</option>
+      <option value="pending">Pendentes</option>
+      <option value="underpaid">Valor menor</option>
+    </select>
+    <input id="fQ" type="search" placeholder="Buscar comprador (e-mail)">
+    <button class="btn" id="btnCsv">Exportar CSV</button>
+  </div>
+
+  <table id="tb">
+    <thead><tr><th>Forma</th><th>Valor</th><th>Comprador</th><th>Quando</th><th>Status</th></tr></thead>
+    <tbody id="tbBody"></tbody>
+  </table>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>Eventos do jogo</h2>
+      <div class="chips" id="events" style="margin-top:10px"></div>
+    </div>
+    <div class="panel">
+      <h2>Erros do cliente</h2>
+      <div id="errors" style="margin-top:10px"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+'use strict';
+const KEY = new URLSearchParams(location.search).get('key') || '';
+const BRL = c => 'R$ ' + (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+const stName = { paid: 'pago', pending: 'pendente', underpaid: 'valor menor' };
+const mName = { pix: 'PIX', card: 'Cartão', boleto: 'Boleto' };
+let OVER = null;
+
+function el(id){ return document.getElementById(id); }
+function esc(t){ return String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+function fit(cv){
+  const w = cv.clientWidth || cv.parentElement.clientWidth;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(parseInt(cv.getAttribute('height')) * dpr);
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { c, w, h: parseInt(cv.getAttribute('height')) };
+}
+
+function drawBars(days){
+  const cv = el('cvBars');
+  const { c, w, h } = fit(cv);
+  c.clearRect(0, 0, w, h);
+  const max = Math.max(1, ...days.map(d => d.cents));
+  const pad = 6, bw = w / days.length;
+  const baseY = h - 16;
+  c.strokeStyle = 'rgba(255,255,255,.12)';
+  c.beginPath(); c.moveTo(0, baseY + .5); c.lineTo(w, baseY + .5); c.stroke();
+  days.forEach((d, i) => {
+    const bh = Math.round((d.cents / max) * (baseY - 18));
+    const x = i * bw + pad, bwid = bw - pad * 2;
+    const today = i === days.length - 1;
+    if (d.cents <= 0){
+      c.fillStyle = 'rgba(255,255,255,.09)';
+      c.fillRect(x, baseY - 2, bwid, 2);
+      return;
+    }
+    c.fillStyle = today ? '#ffd24a' : '#2f7d4f';
+    const r = Math.min(5, bwid / 2);
+    c.beginPath();
+    c.moveTo(x, baseY);
+    c.lineTo(x, baseY - bh + r);
+    c.arcTo(x, baseY - bh, x + r, baseY - bh, r);
+    c.lineTo(x + bwid - r, baseY - bh);
+    c.arcTo(x + bwid, baseY - bh, x + bwid, baseY - bh - 0 + r, r);
+    c.lineTo(x + bwid, baseY);
+    c.fill();
+    if (today){
+      // assinatura: a bola 8 "encaçapada" no topo da barra de hoje
+      c.beginPath();
+      c.arc(x + bwid / 2, baseY - bh - 9, 6.5, 0, Math.PI * 2);
+      c.fillStyle = '#101317'; c.fill();
+      c.strokeStyle = '#ffd24a'; c.lineWidth = 1.6; c.stroke();
+    }
+    if (i % 2 === 0 || today){
+      c.fillStyle = 'rgba(157,184,166,.8)';
+      c.font = '9px system-ui';
+      c.textAlign = 'center';
+      c.fillText(d.label, x + bwid / 2, h - 4);
+    }
+  });
+}
+
+function drawDonut(m){
+  const cv = el('cvDonut');
+  const { c, w, h } = fit(cv);
+  c.clearRect(0, 0, w, h);
+  const total = m.pix.cents + m.card.cents + m.boleto.cents;
+  if (!total){
+    c.fillStyle = 'rgba(157,184,166,.9)';
+    c.font = '12px system-ui'; c.textAlign = 'center';
+    c.fillText('Ainda sem cobranças pagas —', w / 2, h / 2 - 8);
+    c.fillText('as vendas aparecem aqui em tempo real.', w / 2, h / 2 + 10);
+    el('donutLegend').innerHTML = '';
+    return;
+  }
+  const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 12, r0 = R * 0.62;
+  const segs = [
+    { k: 'pix', v: m.pix.cents, col: '#ffd24a' },
+    { k: 'card', v: m.card.cents, col: '#3fa06b' },
+    { k: 'boleto', v: m.boleto.cents, col: '#3b7dd8' }
+  ].filter(s => s.v > 0);
+  let a = -Math.PI / 2;
+  segs.forEach(s => {
+    const sw = (s.v / total) * Math.PI * 2;
+    c.beginPath();
+    c.arc(cx, cy, R, a, a + sw);
+    c.arc(cx, cy, r0, a + sw, a, true);
+    c.closePath();
+    c.fillStyle = s.col; c.fill();
+    a += sw;
+  });
+  c.fillStyle = '#eef5ef';
+  c.font = 'bold 13px ui-monospace, monospace';
+  c.textAlign = 'center';
+  c.fillText(BRL(total), cx, cy + 2);
+  c.font = '10px system-ui';
+  c.fillStyle = '#9db8a6';
+  c.fillText('total pago', cx, cy + 16);
+  el('donutLegend').innerHTML = segs.map(s =>
+    '<span><span class="dot" style="background:' + s.col + '"></span>' +
+    mName[s.k] + ' · ' + BRL(s.v) + '</span>').join('');
+}
+
+function render(){
+  const o = OVER; if (!o) return;
+  const t = o.totals;
+  const ticket = t.paid ? Math.round(t.paidCents / t.paid) : 0;
+  el('cards').innerHTML =
+    '<div class="card pago"><b>' + BRL(t.paidCents) + '</b><span>receita paga</span></div>' +
+    '<div class="card"><b>' + t.paid + '</b><span>cobranças pagas</span></div>' +
+    '<div class="card"><b>' + t.pending + '</b><span>pendentes (aguardando pagar)</span></div>' +
+    '<div class="card"><b>' + BRL(ticket) + '</b><span>ticket médio</span></div>';
+
+  drawBars(o.byDay);
+  drawDonut(o.byMethod);
+
+  const ft = el('fTipo').value, fs = el('fSt').value, q = el('fQ').value.trim().toLowerCase();
+  const rows = o.recent.filter(c =>
+    (!ft || c.kind === ft) && (!fs || c.status === fs) && (!q || (c.email || '').includes(q)));
+  el('tbBody').innerHTML = rows.length ? rows.map(c =>
+    '<tr><td>' + (mName[c.kind] || esc(c.kind)) + '</td>' +
+    '<td class="money">' + BRL(c.amountCents) + '</td>' +
+    '<td>' + esc(c.email || '—') + '</td>' +
+    '<td class="num">' + (c.at ? new Date(c.at).toLocaleString('pt-BR') : '—') + '</td>' +
+    '<td class="st ' + esc(c.status) + '">' + (stName[c.status] || esc(c.status)) + '</td></tr>').join('')
+    : '<tr><td colspan="5" class="empty">Nenhuma cobrança com esse filtro. Elas aparecem aqui no instante em que o jogador gera.</td></tr>';
+
+  const ev = o.events || {};
+  const ks = Object.keys(ev);
+  el('events').innerHTML = ks.length
+    ? ks.sort((a, b) => ev[b] - ev[a]).map(k => '<span class="chip">' + esc(k) + ': <b>' + ev[k] + '</b></span>').join('')
+    : '<span class="ok">Sem eventos ainda — abra o jogo para começar a medir.</span>';
+
+  const errs = o.errors || [];
+  el('errors').innerHTML = errs.length
+    ? errs.map(e => '<div class="err">⚠️ ' + esc(e.msg) + ' <small>' + esc(e.at) + '</small></div>').join('')
+    : '<div class="ok">Nenhum erro reportado pelos jogadores. 🎉</div>';
+}
+
+function csv(){
+  if (!OVER) return;
+  const ft = el('fTipo').value, fs = el('fSt').value, q = el('fQ').value.trim().toLowerCase();
+  const rows = OVER.recent.filter(c =>
+    (!ft || c.kind === ft) && (!fs || c.status === fs) && (!q || (c.email || '').includes(q)));
+  const csv = ['forma,valor_r$,comprador,quando,status'].concat(rows.map(c =>
+    [c.kind, (c.amountCents / 100).toFixed(2).replace('.', ','), c.email || '',
+     c.at ? new Date(c.at).toLocaleString('pt-BR') : '', c.status].join(','))).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'cobrancas-sinuca-strike.csv';
+  a.click();
+}
+
+async function load(){
+  try{
+    const r = await fetch('/admin/api/overview?key=' + encodeURIComponent(KEY));
+    if (r.status === 403){ document.body.innerHTML = '<main><h1 style="color:#ffb03a">Acesso negado</h1><p>Use o endereço no formato <code>/admin?key=SUA_CHAVE</code>.</p></main>'; return; }
+    OVER = await r.json();
+    render();
+  } catch(e){}
+}
+
+el('btnCsv').addEventListener('click', csv);
+['fTipo', 'fSt'].forEach(id => el(id).addEventListener('change', render));
+el('fQ').addEventListener('input', render);
+load();
+setInterval(load, 15000);
+window.addEventListener('resize', () => OVER && render());
+</script>
+</body>
+</html>
